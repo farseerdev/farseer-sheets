@@ -4,15 +4,17 @@ import { ToolbarButtonBox } from '../styled/Components';
 import { appColors } from '../styled/useTheme';
 
 type ToolbarButtonProps = {
-    Icon: ComponentType<IconProps>;
+    Icon?: ComponentType<IconProps>;
+    label?: string;
     active?: boolean;
     onClick: () => void;
 };
 
-export function ToolbarButton({ Icon, active = false, onClick }: ToolbarButtonProps): ReactElement {
+export function ToolbarButton({ Icon, label, active = false, onClick }: ToolbarButtonProps): ReactElement {
     return (
         <ToolbarButtonBox $active={active} onClick={onClick}>
-            <Icon color={active ? appColors.purple.w500 : appColors.ui.dark} />
+            {Icon ? <Icon color={active ? appColors.purple.w500 : appColors.ui.dark} /> : null}
+            {label ? <label>{label}</label> : null}
         </ToolbarButtonBox>
     );
 }

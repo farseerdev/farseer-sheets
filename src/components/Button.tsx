@@ -17,9 +17,17 @@ type ButtonProps = {
     label: string;
     active?: boolean;
     onClick: () => void;
+    disabled?: boolean;
 };
 
-export function Button({ label, active = false, type, inverted = false, onClick }: ButtonProps): ReactElement {
+export function Button({
+    label,
+    active = false,
+    type,
+    inverted = false,
+    onClick,
+    disabled = false,
+}: ButtonProps): ReactElement {
     let ButtonComponent = PrimaryButtonBox;
     if (type === ButtonType.Primary && inverted) {
         ButtonComponent = PrimaryInvertedButtonBox;
@@ -29,7 +37,7 @@ export function Button({ label, active = false, type, inverted = false, onClick 
         ButtonComponent = SecondaryButtonBox;
     }
     return (
-        <ButtonComponent $active={active} onClick={onClick}>
+        <ButtonComponent $active={active} $disabled={disabled} onClick={onClick}>
             {label}
         </ButtonComponent>
     );

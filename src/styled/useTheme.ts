@@ -29,6 +29,7 @@ declare module 'goober' {
         colors: AppColorsType;
         font: {
             normalSize: string;
+            titleSize: string;
             headerSize: string;
         };
         borderRadius: {
@@ -45,6 +46,7 @@ declare module 'goober' {
         };
         borderColor: string;
         boxShadow: string;
+        boxShadow2: string;
     }
 }
 
@@ -52,6 +54,7 @@ const theme = {
     colors: appColors,
     font: {
         normalSize: '11px',
+        titleSize: '14px',
         headerSize: '20px',
     },
     borderRadius: {
@@ -68,6 +71,7 @@ const theme = {
     },
     borderColor: '#E9EEF5',
     boxShadow: '0px 4px 16px rgba(112, 0, 255, 0.25)',
+    boxShadow2: '0px 4px 16px rgba(107, 131, 160, 0.15)',
 };
 
 const ThemeContext = createContext(theme);

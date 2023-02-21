@@ -23,6 +23,9 @@ import { ToolbarButton } from './components/ToolbarButton';
 import { Bold, Center, Left, Redo, Right, Undo } from './icons/icons';
 import { Checkbox } from './components/Checkbox';
 import { Button, ButtonType } from './components/Button';
+import Select from './components/Select';
+import { FormulaBar } from './components/FormulaBar';
+import { JoinPopover, SharePopover } from './components/Popovers';
 
 setup(
     React.createElement,
@@ -1167,6 +1170,8 @@ function socketJoin(shareCode: string) {
 function App() {
     const { displayData, sourceData, editData, cellStyle, sheetState, dispatch } = useSheetData();
     const [pointerMap, setPointerMap] = useState(new Map<string, PeerData>());
+    const [showJoinPopover, setShowJoinPopover] = useState(false);
+    const [showSharePopover, setShowSharePopover] = useState(false);
 
     useEffect(() => {
         function onSync(data: any) {
@@ -1396,13 +1401,6 @@ function App() {
                 <HeaderLogo />
                 <HeaderTitle>Untitled Sheet</HeaderTitle>
                 <Spacer />
-                {/* to do: */}{' '}
-                <Button
-                    type={ButtonType.Primary}
-                    inverted
-                    label={'Save or Share'}
-                    onClick={() => alert('Hit Cmd+D or Ctrl+D to bookmark the page')}
-                />
                 <Button
                     type={ButtonType.Secondary}
                     inverted
@@ -1411,27 +1409,42 @@ function App() {
                 />
                 {sheetState.multiplayerStatus === 'none' ? (
                     <>
-                        <input
-                            type="text"
-                            value={sheetState.joinShareCode}
-                            onChange={(e) =>
-                                dispatch({ type: SheetActionType.UPDATE_JOIN_SHARE_CODE, code: e.target.value })
-                            }
-                        />
                         <Button
                             type={ButtonType.Secondary}
                             inverted
                             label={'Join'}
-                            onClick={() => onJoinButtonClick()}
+                            onClick={() => setShowJoinPopover(true)}
                         />
                         <Button
-                            type={ButtonType.Primary}
+                            type={ButtonType.Secondary}
                             inverted
                             label={'Start server'}
                             onClick={() => onStartServerClick()}
                         />
+                        {showJoinPopover && (
+                            <JoinPopover
+                                value={sheetState.joinShareCode}
+                                onValueChange={(newValue: string) =>
+                                    dispatch({ type: SheetActionType.UPDATE_JOIN_SHARE_CODE, code: newValue })
+                                }
+                                onJoinClick={onJoinButtonClick}
+                                onClose={() => setShowJoinPopover(false)}
+                            />
+                        )}
                     </>
                 ) : null}
+                <Button type={ButtonType.Primary} inverted label={'Share'} onClick={() => setShowSharePopover(true)} />
+                {showSharePopover && (
+                    <SharePopover
+                        codeValue=""
+                        onCodeValueChange={(newValue: string) => alert('Hit Cmd+D or Ctrl+D to bookmark the page')}
+                        onCodeValueClick={() => alert('Hit Cmd+D or Ctrl+D to bookmark the page')}
+                        copyValue=""
+                        onCopyValueChange={(newValue: string) => alert('Hit Cmd+D or Ctrl+D to bookmark the page')}
+                        onCopyValueClick={() => alert('Hit Cmd+D or Ctrl+D to bookmark the page')}
+                        onClose={() => setShowSharePopover(false)}
+                    />
+                )}
             </Header>
 
             <Toolbar>
@@ -1469,11 +1482,82 @@ function App() {
                         onClick={() => dispatch({ type: SheetActionType.SET_STYLE, textAlign: TextAlign.RIGHT })}
                     />
                     <ToolbarBreak />
-
+                    <Select
+                        placeholder="Select data type"
+                        disabled={sheetState.selectedCell === null}
+                        selectedValue={sheetState.selectedCell ? sheetState.selectedCell?.dataType.toString() : 'none'}
+                        options={[
+                            { value: 'none', label: 'None' },
+                            { value: '' + DataType.STRING, label: 'String' },
+                            { value: '' + DataType.NUMBER, label: 'Number' },
+                        ]}
+                        onOptionSelect={(option) => {
+                            if (option.value === 'none') {
+                                return;
+                            }
+                            const newValue = Number(option.value) as DataType;
+                            if (newValue !== sheetState.selectedCell?.dataType) {
+                                dispatch({
+                                    type: SheetActionType.SET_DATA_TYPE_FOR_SELECTED_CELLS,
+                                    dataType: newValue,
+                                });
+                            }
+                        }}
+                    />
+                    <Select
+                        placeholder="Select format"
+                        disabled={sheetState.selectedCell === null}
+                        selectedValue={sheetState.selectedCell?.format || ''}
+                        options={formats.map((format, index) => {
+                            let label = format.label;
+                            if (format.example !== undefined) {
+                                label += `____ Example: ${numfmt.format(format.format, format.example)}`;
+                            }
+                            if (format.hasNegative !== undefined) {
+                                label += ' ' + numfmt.format(format.format, -format.example);
+                            }
+                            return { value: index, label: label };
+                        })}
+                        onOptionSelect={(option) => {
+                            if (option.value !== sheetState.selectedCell?.dataType) {
+                                dispatch({
+                                    type: SheetActionType.SET_FORMAT_FOR_SELECTED_CELLS,
+                                    formatId: Number(option.value),
+                                });
+                            }
+                        }}
+                    />
                     <Spacer />
-
+                    <Select
+                        placeholder="Freeze rows"
+                        selectedValue={'' + sheetState.freezeRows}
+                        options={[
+                            { value: '0', label: 'No rows freeze' },
+                            { value: '1', label: 'Freeze 1 row' },
+                            { value: '2', label: 'Freeze 2 rows' },
+                            { value: '3', label: 'Freeze 3 rows' },
+                        ]}
+                        onOptionSelect={(option) => {
+                            dispatch({ type: SheetActionType.SET_FREEZE_ROWS, freezeRows: Number(option.value) });
+                        }}
+                    />
+                    <Select
+                        placeholder="Freeze columns"
+                        selectedValue={'' + sheetState.freezeColumns}
+                        options={[
+                            { value: '0', label: 'No columns freeze' },
+                            { value: '1', label: 'Freeze 1 column' },
+                            { value: '2', label: 'Freeze 2 columns' },
+                            { value: '3', label: 'Freeze 3 columns' },
+                        ]}
+                        onOptionSelect={(option) => {
+                            dispatch({
+                                type: SheetActionType.SET_FREEZE_COLUMNS,
+                                freezeColumns: Number(option.value),
+                            });
+                        }}
+                    />
                     <ToolbarBreak />
-
                     <Checkbox
                         label="Hide gridlines"
                         checked={sheetState.hideGridlines}
@@ -1485,102 +1569,16 @@ function App() {
                         }
                     />
                 </FlexRow>
-                <div>
-                    Toolbar Data type:
-                    <select
-                        disabled={sheetState.selectedCell === null}
-                        value={sheetState.selectedCell ? sheetState.selectedCell?.dataType.toString() : 'none'}
-                        onChange={(e) => {
-                            if (e.target.value === 'none') {
-                                return;
-                            }
-                            dispatch({
-                                type: SheetActionType.SET_DATA_TYPE_FOR_SELECTED_CELLS,
-                                dataType: Number(e.target.value) as DataType,
-                            });
-                        }}
-                    >
-                        <option value="none">None</option>
-                        <option value={'' + DataType.STRING}>String</option>
-                        <option value={'' + DataType.NUMBER}>Number</option>
-                    </select>
-                    Format:
-                    <select
-                        disabled={sheetState.selectedCell === null}
-                        value={sheetState.selectedCell?.format || ''}
-                        onChange={(e) =>
-                            dispatch({
-                                type: SheetActionType.SET_FORMAT_FOR_SELECTED_CELLS,
-                                formatId: Number(e.target.value),
-                            })
-                        }
-                    >
-                        {formats.map((format, index) => {
-                            let label = format.label;
-                            if (format.example !== undefined) {
-                                label += `____ Example: ${numfmt.format(format.format, format.example)}`;
-                            }
-                            if (format.hasNegative !== undefined) {
-                                label += ' ' + numfmt.format(format.format, -format.example);
-                            }
-                            return (
-                                <option key={`format-option-${index}`} value={index}>
-                                    {label}
-                                </option>
-                            );
-                        })}
-                    </select>
-                    Freeze rows:
-                    <select
-                        value={'' + sheetState.freezeRows}
-                        onChange={(e) =>
-                            dispatch({ type: SheetActionType.SET_FREEZE_ROWS, freezeRows: Number(e.target.value) })
-                        }
-                    >
-                        <option value="0">No freeze</option>
-                        <option value="1">Freeze 1 row</option>
-                        <option value="2">Freeze 2 rows</option>
-                        <option value="3">Freeze 3 rows</option>
-                    </select>
-                    Freeze colums:
-                    <select
-                        value={'' + sheetState.freezeColumns}
-                        onChange={(e) =>
-                            dispatch({
-                                type: SheetActionType.SET_FREEZE_COLUMNS,
-                                freezeColumns: Number(e.target.value),
-                            })
-                        }
-                    >
-                        <option value="0">No freeze</option>
-                        <option value="1">Freeze 1 column</option>
-                        <option value="2">Freeze 2 columns</option>
-                        <option value="3">Freeze 3 columns</option>
-                    </select>
-                </div>
-                <div>
-                    Formula bar
-                    <input
-                        type="text"
-                        value={sheetState.formulaBarContent}
-                        onChange={(e) =>
-                            dispatch({ type: SheetActionType.UPDATE_FORMULA_BAR_CONTENT, value: e.target.value })
-                        }
-                        onKeyDown={(e) => {
-                            if (e.key === 'Enter') {
-                                dispatch({ type: SheetActionType.COMMIT_FORMULA_BAR });
-                                e.preventDefault();
-                                //@ts-ignore
-                                e.target.blur();
-                            } else if (e.key === 'Escape') {
-                                dispatch({ type: SheetActionType.DISCARD_FORMULA_BAR });
-                            }
-                        }}
-                        onBlur={(e) => {
-                            dispatch({ type: SheetActionType.COMMIT_FORMULA_BAR });
-                        }}
-                    ></input>
-                </div>
+                <FormulaBar
+                    selectedString={convertSelectionToAddress(sheetState.selection)}
+                    value={sheetState.formulaBarContent}
+                    onChange={(value: string) => {
+                        dispatch({ type: SheetActionType.UPDATE_FORMULA_BAR_CONTENT, value: value });
+                    }}
+                    onEnter={() => dispatch({ type: SheetActionType.COMMIT_FORMULA_BAR })}
+                    onEscape={() => dispatch({ type: SheetActionType.DISCARD_FORMULA_BAR })}
+                    onBlur={() => dispatch({ type: SheetActionType.COMMIT_FORMULA_BAR })}
+                />
             </Toolbar>
 
             <SheetContainer>
