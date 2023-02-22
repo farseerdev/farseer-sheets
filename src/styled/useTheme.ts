@@ -36,6 +36,7 @@ declare module 'goober' {
             s: string;
             m: string;
             l: string;
+            xl: string;
         };
         space: {
             xs: string;
@@ -61,11 +62,12 @@ const theme = {
         s: '3px',
         m: '6px',
         l: '10px',
+        xl: '20px',
     },
     space: {
         xs: '2px',
-        s: '4px',
-        m: '8px',
+        s: '5px',
+        m: '10px',
         l: '15px',
         xl: '20px',
     },

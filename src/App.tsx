@@ -25,7 +25,7 @@ import { Checkbox } from './components/Checkbox';
 import { Button, ButtonType } from './components/Button';
 import Select from './components/Select';
 import { FormulaBar } from './components/FormulaBar';
-import { JoinPopover, SharePopover } from './components/Popovers';
+import { InfoPopoverProps, JoinPopover, SharePopover } from './components/Popovers';
 
 setup(
     React.createElement,
@@ -1172,6 +1172,7 @@ function App() {
     const [pointerMap, setPointerMap] = useState(new Map<string, PeerData>());
     const [showJoinPopover, setShowJoinPopover] = useState(false);
     const [showSharePopover, setShowSharePopover] = useState(false);
+    const [showInfoPopover, setShowInfoPopover] = useState(true);
 
     useEffect(() => {
         function onSync(data: any) {
@@ -1687,6 +1688,13 @@ function App() {
                     © 2023 Farseer Sheets, created by <Link href="https://www.farseer.io">Farseer</Link>
                 </p>
             </Footer>
+            {showInfoPopover && (
+                <InfoPopoverProps
+                    activeTemplate={'empty'}
+                    onClickTemplate={(selectedTemplate: string) => console.log(selectedTemplate)}
+                    onClose={() => setShowInfoPopover(false)}
+                />
+            )}
         </Container>
     );
 }

@@ -14,9 +14,11 @@ export const HeaderTitle = styled('a')(({ theme }) => ({
 export const ButtonBox = styled('div')<{ $active: boolean; $disabled: boolean }>(({ theme, $active, $disabled }) => ({
     display: 'flex',
     alignItems: 'center',
+    justifyContent: 'center',
+    width: 'fit-content',
     borderRadius: theme.borderRadius.m,
     padding: theme.space.m,
-    height: '24px',
+    height: '32px',
     fontWeight: 700,
     cursor: $disabled ? 'not-allowed' : 'pointer',
     pointerEvents: $disabled ? 'none' : 'all',
@@ -196,15 +198,19 @@ export const ForumulaIconBox = styled('div')(({ theme }) => ({
 }));
 
 export const Popover = styled('div')(({ theme }) => ({
-    padding: `${theme.space.xl}`,
     background: theme.colors.ui.white,
     position: 'absolute',
+    borderRadius: theme.borderRadius.xl,
+    zIndex: 13,
+    boxShadow: theme.boxShadow2,
+}));
+
+export const TopRightPopover = styled(Popover)(({ theme }) => ({
+    border: `1px solid ${theme.colors.neutral.w300}`,
+    padding: `${theme.space.xl}`,
+    borderRadius: theme.borderRadius.l,
     top: '80px',
     right: '20px',
-    zIndex: 13,
-    borderRadius: theme.borderRadius.l,
-    boxShadow: theme.boxShadow2,
-    border: `1px solid ${theme.colors.neutral.w300}`,
     width: '390px',
 }));
 
@@ -225,4 +231,74 @@ export const PopoverCard = styled('div')(({ theme }) => ({
 export const SmallTitle = styled('div')(({ theme }) => ({
     fontSize: theme.font.normalSize,
     fontWeight: 700,
+}));
+
+export const PopoverOverlay = styled('div')(({ theme }) => ({
+    background: `${theme.colors.ui.dark}4d`, // added 20% opacity
+    width: '100%',
+    height: '100vh',
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    zIndex: 130,
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+}));
+
+export const IntroLeft = styled('div')(({ theme }) => ({
+    background: theme.colors.purple.w500,
+    width: '220px',
+    borderRadius: theme.borderRadius.xl,
+    padding: '40px',
+}));
+
+export const IntroRight = styled('div')(({ theme }) => ({
+    width: '700px',
+    padding: '40px',
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '20px',
+
+    p: {
+        fontSize: theme.font.titleSize,
+        fontWeight: 400,
+        color: theme.colors.neutral.w700,
+        em: {
+            color: theme.colors.ui.dark,
+            fontWeight: 700,
+            fontStyle: 'normal',
+        },
+        maxWidth: '500px',
+    },
+    'p.small': {
+        fontSize: '12px',
+    },
+}));
+
+export const IntroTitle = styled('div')(({ theme }) => ({
+    fontSize: '32px',
+    fontWeight: 700,
+}));
+
+export const TemplateButton = styled('div')<{ $active: boolean }>(({ theme, $active = false }) => ({
+    border: `1px solid ${$active ? theme.colors.purple.w500 : theme.colors.neutral.w300}`,
+    borderRadius: theme.borderRadius.l,
+    height: '122px',
+    width: '200px',
+    overflow: 'hidden',
+    position: 'relative',
+    cursor: 'pointer',
+    p: {
+        fontWeight: 700,
+        fontSize: theme.font.normalSize,
+        position: 'absolute',
+        bottom: '15px',
+        left: '15px',
+        maxWidth: 'calc(100%-30px)',
+        color: theme.colors.ui.dark,
+    },
+    '&:hover': {
+        border: `1px solid ${$active ? theme.colors.purple.w500 : theme.colors.neutral.w500}`,
+    },
 }));

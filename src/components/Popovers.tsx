@@ -1,8 +1,22 @@
 import React from 'react';
-import { Close, Join } from '../icons/icons';
-import { Input, Popover, PopoverCard, PopoverTitle, SmallTitle, Spacer } from '../styled/Components';
+import { Close, Copy, EmptyTemplate, IntroImage, IntroLogo, Join, Template1, Template2 } from '../icons/icons';
+import {
+    Input,
+    IntroLeft,
+    IntroRight,
+    IntroTitle,
+    Popover,
+    PopoverCard,
+    PopoverOverlay,
+    PopoverTitle,
+    SmallTitle,
+    Spacer,
+    TemplateButton,
+    TopRightPopover,
+} from '../styled/Components';
 import { appColors } from '../styled/useTheme';
 import { FlexRow } from '../styled/Wrappers';
+import { Button, ButtonType } from './Button';
 import { ToolbarButton } from './ToolbarButton';
 
 interface JoinPopoverProps {
@@ -14,7 +28,7 @@ interface JoinPopoverProps {
 
 export function JoinPopover({ value, onJoinClick, onValueChange, onClose }: JoinPopoverProps) {
     return (
-        <Popover>
+        <TopRightPopover>
             <PopoverHeader label="Join" onClose={onClose} />
 
             <PopoverContentCard
@@ -27,7 +41,7 @@ export function JoinPopover({ value, onJoinClick, onValueChange, onClose }: Join
                 buttonLabel="Join"
                 onButtonClick={onJoinClick}
             />
-        </Popover>
+        </TopRightPopover>
     );
 }
 
@@ -51,11 +65,11 @@ export function SharePopover({
     onClose,
 }: SharePopoverProps) {
     return (
-        <Popover>
+        <TopRightPopover>
             <PopoverHeader label="Choose how you want to share" onClose={onClose} />
 
             <PopoverContentCard
-                icon={<Join color={appColors.purple.w500} />}
+                icon={<Copy color={appColors.purple.w500} />}
                 title="Give others a copy"
                 description=" To make a copy of this sheet’s current state, simply copy the current URL and send it to another
                 person."
@@ -74,7 +88,7 @@ export function SharePopover({
                 buttonLabel="Copy"
                 onButtonClick={onCodeValueClick}
             />
-        </Popover>
+        </TopRightPopover>
     );
 }
 
@@ -125,5 +139,70 @@ export function IconTitle({ icon, title }: any) {
             {icon}
             <SmallTitle>{title}</SmallTitle>
         </FlexRow>
+    );
+}
+
+interface InfoPopoverProps {
+    activeTemplate: string;
+    onClickTemplate: (selectedTemplate: string) => void;
+    onClose: () => void;
+}
+
+export function InfoPopoverProps({ activeTemplate, onClickTemplate, onClose }: InfoPopoverProps) {
+    return (
+        <PopoverOverlay>
+            <Popover style={{ display: 'flex' }}>
+                <IntroLeft>
+                    <IntroLogo />
+                </IntroLeft>
+                <IntroRight>
+                    <IntroTitle>Welcome to Farseer Sheets!</IntroTitle>
+                    <p>
+                        <em>Farseer Sheets</em> is an easy-to-use spreadsheet built for hassle-free collaboration, no
+                        accounts required, developed by Farseer.
+                    </p>
+                    <p>
+                        <em>How is it any different?</em>
+                    </p>
+                    <IntroImage />
+                    <p className="small">
+                        Unlike other online spreadsheets, your sheet entries and changes are{' '}
+                        <em>stored “locally” within your browser’s URL</em>, which means that by sharing the current URL
+                        to another person you give them a copy of your sheet.
+                    </p>
+                    <p className="small">
+                        If you want to “be on the same page” with another person, you can invite them to collaborate on
+                        your sheet by sharing them a unique access code.
+                    </p>
+                    <p>
+                        <em>Pick a template to start</em>
+                    </p>
+                    <FlexRow $gap={8}>
+                        <TemplateButton $active={activeTemplate === 'empty'} onClick={() => onClickTemplate('empty')}>
+                            <EmptyTemplate />
+                            <p>Blank Sheet </p>
+                        </TemplateButton>
+                        <TemplateButton
+                            $active={activeTemplate === 'template1'}
+                            onClick={() => onClickTemplate('template1')}
+                        >
+                            <Template1 />
+                            <p>Template 1</p>
+                        </TemplateButton>
+                        <TemplateButton
+                            $active={activeTemplate === 'template2'}
+                            onClick={() => onClickTemplate('templat2')}
+                        >
+                            <Template2 />
+                            <p>Template 2</p>
+                        </TemplateButton>
+                    </FlexRow>
+
+                    <div style={{ alignSelf: 'flex-end' }}>
+                        <Button type={ButtonType.Primary} label={'Create Sheet'} onClick={onClose} />
+                    </div>
+                </IntroRight>
+            </Popover>
+        </PopoverOverlay>
     );
 }
