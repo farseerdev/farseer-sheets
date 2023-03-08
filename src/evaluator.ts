@@ -1,6 +1,6 @@
 import { builtinMap, Instruction, Opcode } from './types';
 
-function compare(a1: number, a2: number, op: Opcode) {
+function compare(a1: number | string, a2: number | string, op: Opcode) {
     switch (op) {
         case Opcode.EQ:
             return a1 === a2 ? 1 : 0;
@@ -59,19 +59,19 @@ export function evaluate(
             case Opcode.GT: {
                 let arg2 = stack.pop();
                 let arg1 = stack.pop();
-                let a1 = 0;
-                let a2 = 0;
                 if (arg1 === undefined || arg2 === undefined) {
                     throw new Error('Runtime error');
                 }
-                if (typeof arg1 === 'number') {
-                    a1 = arg1;
-                }
-                if (typeof arg2 === 'number') {
-                    a2 = arg2;
+
+                if (
+                    (typeof arg1 === 'string' || typeof arg1 === 'number') &&
+                    (typeof arg2 === 'number' || typeof arg2 === 'string')
+                ) {
+                    stack.push(compare(arg1, arg2, inst.opcode));
+                } else {
+                    stack.push(0);
                 }
 
-                stack.push(compare(a1, a2, inst.opcode));
                 break;
             }
             case Opcode.MUL:

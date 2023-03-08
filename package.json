@@ -17,7 +17,7 @@
         "react": "^18.2.0",
         "react-dom": "^18.2.0",
         "react-scripts": "5.0.1",
-        "sheet-happens": "0.0.21",
+        "sheet-happens": "0.0.22",
         "socket.io-client": "^4.5.4",
         "typescript": "^4.9.5",
         "vizzu": "^0.6.1",

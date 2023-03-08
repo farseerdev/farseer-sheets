@@ -11,7 +11,7 @@ export const appColors = {
     purple: {
         w100: '#F1E5FF',
         w300: '#CEA9FF',
-        w500: '#7000FF',
+        w500: '#8804EF',
         w700: '#5600C3',
         w900: '#320073',
     },
@@ -54,7 +54,7 @@ declare module 'goober' {
 const theme = {
     colors: appColors,
     font: {
-        normalSize: '11px',
+        normalSize: '12px',
         titleSize: '14px',
         headerSize: '20px',
     },

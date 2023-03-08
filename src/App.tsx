@@ -1,4 +1,4 @@
-import React, { useEffect, useReducer, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useReducer, useRef, useState } from 'react';
 import './App.css';
 import Sheet, { Change, Style } from 'sheet-happens';
 import 'sheet-happens/dist/index.css';
@@ -40,13 +40,12 @@ setup(
 /*
 
 TODO:
-* automatically start server on launch
 * full row/col selection + change props
-* selection goes back to start when picking cells in formula
 * cycle detection
 * builtin functions
 * cell pointing from formula bar
-* multiple selection in sheet-happens
+* dollar sign in formula
+* sheet-happens: extend input when typing
 
 */
 
@@ -122,6 +121,10 @@ const sheetStateAvroType = avro.Type.forSchema({
                 items: ['int'],
             },
         },
+        {
+            name: 'title',
+            type: 'string',
+        },
     ],
 });
 
@@ -179,7 +182,7 @@ interface Cell {
     format: number;
 
     // dont serialize
-    value?: string | number | null;
+    calculatedValue?: string | number | null;
     calculated?: boolean;
     textStyle: TextStyle;
     textAlign: TextAlign;
@@ -191,10 +194,22 @@ interface PeerData {
     lastUpdated: number;
     color: string;
     active: boolean;
+    selection: { x1: number; y1: number; x2: number; y2: number };
 }
 
 function createKey(x: number, y: number) {
     return `${x}_${y}`;
+}
+
+function generateShareCode() {
+    let code = '';
+    for (let i = 0; i < 8; i++) {
+        if (i === 4) {
+            code += '-';
+        }
+        code += String.fromCharCode(Math.floor(Math.random() * 26) + 65);
+    }
+    return code;
 }
 
 function combineDataTypeAndFormula(dataType: DataType, formula: boolean) {
@@ -224,6 +239,7 @@ function serializeSheetState(sheetState: SheetState) {
     }));
 
     const objForSerialization = {
+        title: sheetState.title,
         freezeRows: sheetState.freezeRows,
         freezeColumns: sheetState.freezeColumns,
         hideGridlines: sheetState.hideGridlines,
@@ -245,6 +261,7 @@ function serializeSheetState(sheetState: SheetState) {
 
 function deserializeSheetState(data: string): SheetState {
     const sheetState: SheetState = {
+        title: 'Untitled Sheet',
         cellMap: new Map(),
         formulaBarContent: '',
         formulaBarContentChanged: false,
@@ -258,7 +275,7 @@ function deserializeSheetState(data: string): SheetState {
         rowHeight: [],
         version: 0,
         multiplayerStatus: 'none',
-        myShareCode: 'asdf',
+        myShareCode: generateShareCode(),
         joinShareCode: '',
     };
 
@@ -277,6 +294,7 @@ function deserializeSheetState(data: string): SheetState {
         sheetState.columnWidth = deserializedObj.columnWidth;
         sheetState.rowHeight = deserializedObj.rowHeight;
         sheetState.version = deserializedObj.version;
+        sheetState.title = deserializedObj.title;
 
         const cellCount = deserializedObj.cells_x.length;
         for (let i = 0; i < cellCount; i++) {
@@ -393,6 +411,22 @@ function applyShiftToFormula(formula: string, x: number, y: number) {
     return correctedContent;
 }
 
+type CellLoader = (address: string) => number | string | null | (number | string | null)[][];
+
+function getCellValue(cell: Cell, loader?: CellLoader): number | string | null {
+    if (cell.formula) {
+        if (!cell.calculated && loader !== undefined) {
+            evaluateCell(cell, loader);
+        }
+        if (cell.calculatedValue !== undefined) {
+            return cell.calculatedValue;
+        } else {
+            return null;
+        }
+    }
+    return cell.content;
+}
+
 function getLoader(data: Map<string, Cell>) {
     return function ldr(address: string) {
         if (address.includes(':')) {
@@ -409,10 +443,7 @@ function getLoader(data: Map<string, Cell>) {
                     const key = createKey(x, y);
                     const cell = data.get(key);
                     if (cell) {
-                        if (cell.formula && !cell.calculated) {
-                            evaluateCell(data, key, cell, ldr);
-                        }
-                        valuesRow.push(cell.value || null);
+                        valuesRow.push(getCellValue(cell, ldr));
                     } else {
                         valuesRow.push(null);
                     }
@@ -428,26 +459,14 @@ function getLoader(data: Map<string, Cell>) {
             const key = createKey(res.col, res.row);
             const cell = data.get(key);
             if (cell) {
-                if (cell.formula && !cell.calculated) {
-                    evaluateCell(data, key, cell, ldr);
-                }
-                if (cell.value === undefined) {
-                    //throw new Error('Cell value undefined');
-                    return null;
-                }
-                return cell.value;
+                return getCellValue(cell, ldr);
             }
             return null;
         }
     };
 }
 
-function evaluateCell(
-    data: Map<string, Cell>,
-    cellKey: string,
-    cell: Cell,
-    loader: (address: string) => number | string | null | (number | string | null)[][]
-) {
+function evaluateCell(cell: Cell, loader: (address: string) => number | string | null | (number | string | null)[][]) {
     //console.log('-> Evaluating cell:', cellKey);
     const instr = compileFormula((cell.content as string).substring(1));
     if (instr.length > 0) {
@@ -458,14 +477,14 @@ function evaluateCell(
             } else {
                 cell.dataType = DataType.STRING;
             }
-            cell.value = result;
+            cell.calculatedValue = result;
         } catch (e) {
             cell.dataType = DataType.STRING;
-            cell.value = '#ERROR!';
+            cell.calculatedValue = '#ERROR!';
         }
     } else {
         cell.dataType = DataType.STRING;
-        cell.value = '';
+        cell.calculatedValue = '';
     }
     //console.log('-> DONE Evaluating cell:', cellKey);
     cell.calculated = true;
@@ -479,10 +498,8 @@ function calculate(data: Map<string, Cell>) {
     for (const [key, cell] of data) {
         if (cell.formula) {
             if (!cell.calculated) {
-                evaluateCell(data, key, cell, loader);
+                evaluateCell(cell, loader);
             }
-        } else {
-            cell.value = cell.content;
         }
     }
 }
@@ -503,6 +520,7 @@ function packStyleInfo(textAlign: TextAlign, textStyle: TextStyle) {
 }
 
 interface SheetState {
+    title: string;
     cellMap: Map<string, Cell>;
     formulaBarContent: string;
     formulaBarContentChanged: boolean;
@@ -540,6 +558,7 @@ const enum SheetActionType {
     SET_STYLE = 'SET_STYLE',
     SET_MULTIPLAYER_STATUS = 'SET_MULTIPLAYER_STATUS',
     UPDATE_JOIN_SHARE_CODE = 'UPDATE_JOIN_SHARE_CODE',
+    SET_SHEET_TITLE = 'SET_SHEET_TITLE',
 }
 
 const actionTypesToSend = new Set([
@@ -556,6 +575,7 @@ const actionTypesToSend = new Set([
     SheetActionType.SET_ROW_HEIGHTS,
     SheetActionType.SET_COLUMN_WIDTHS,
     SheetActionType.SET_STYLE,
+    SheetActionType.SET_SHEET_TITLE,
 ]);
 
 interface SetUpdateJoinShareCode {
@@ -636,6 +656,11 @@ interface ChangeSheetValueAction {
     changes: Change[];
 }
 
+interface SetSheetTitle {
+    type: SheetActionType.SET_SHEET_TITLE;
+    title: string;
+}
+
 type SheetAction = (
     | ChangeSheetValueAction
     | ToggleGridlinesAction
@@ -656,6 +681,7 @@ type SheetAction = (
     | SetStyleAction
     | SetMultiplayerStatusAction
     | SetUpdateJoinShareCode
+    | SetSheetTitle
 ) & { fromSocket?: boolean };
 
 function createCell(content: string | number, oldCell?: Cell): Cell {
@@ -678,7 +704,6 @@ function createCell(content: string | number, oldCell?: Cell): Cell {
 
     return {
         content: content,
-        value: content,
         dataType: dataType,
         formula,
         format: oldCell?.format ?? 0,
@@ -939,6 +964,7 @@ function sheetReducer(state: SheetState, action: SheetAction) {
         case SheetActionType.UPDATE_STATE_FROM_STRING: {
             const deser = deserializeSheetState(action.data);
             newState = {
+                title: deser.title,
                 cellMap: deser.cellMap,
                 formulaBarContent: state.formulaBarContent,
                 formulaBarContentChanged: state.formulaBarContentChanged,
@@ -1018,6 +1044,11 @@ function sheetReducer(state: SheetState, action: SheetAction) {
             newState.joinShareCode = action.code;
             break;
         }
+        case SheetActionType.SET_SHEET_TITLE: {
+            newState.title = action.title;
+            updateUrl(newState);
+            break;
+        }
     }
 
     //console.log('act: ', action.type, ' status:', newState.multiplayerStatus, ' old: ', state.multiplayerStatus);
@@ -1060,14 +1091,17 @@ function useSheetData() {
     const displayData = (x: number, y: number) => {
         const key = createKey(x, y);
         const cell = sheetState.cellMap.get(key);
-        if (cell && cell.value !== undefined) {
-            if (typeof cell.value === 'number') {
-                return numfmt.format(formats[cell.format].format, cell.value);
+        if (cell) {
+            const value = getCellValue(cell);
+            if (typeof value === 'number') {
+                return numfmt.format(formats[cell.format].format, value);
+            } else {
+                return value;
             }
-            return cell.value;
         }
         return null;
     };
+
     const editData = (x: number, y: number) => {
         const key = createKey(x, y);
         const cell = sheetState.cellMap.get(key);
@@ -1076,6 +1110,7 @@ function useSheetData() {
         }
         return '';
     };
+
     const sourceData = (x: number, y: number) => {
         const key = createKey(x, y);
         const cell = sheetState.cellMap.get(key);
@@ -1126,6 +1161,7 @@ const enum SocketCommandType {
     REQUEST_DATA_SOCKET_COMMAND = 'REQUEST_DATA_SOCKET_COMMAND',
     FULL_DATA_SOCKET_COMMAND = 'FULL_DATA_SOCKET_COMMAND',
     POINTER_SYNC_SOCKET_COMMAND = 'POINTER_SYNC_SOCKET_COMMAND',
+    SELECTION_SYNC_SOCKET_COMMAND = 'SELECTION_SYNC_SOCKET_COMMAND',
     ACTION_SOCKET_COMMAND = 'ACTION_SOCKET_COMMAND',
 }
 
@@ -1143,6 +1179,16 @@ interface PointerSyncSocketCommand {
     x: number;
     y: number;
 }
+
+interface SelectionSyncSocketCommand {
+    command: SocketCommandType.SELECTION_SYNC_SOCKET_COMMAND;
+    peerId: string;
+    x1: number;
+    y1: number;
+    x2: number;
+    y2: number;
+}
+
 interface ActionSocketCommand {
     command: SocketCommandType.ACTION_SOCKET_COMMAND;
     peerId: string;
@@ -1154,6 +1200,7 @@ type SocketCommand = (
     | FullDataSocketCommand
     | PointerSyncSocketCommand
     | ActionSocketCommand
+    | SelectionSyncSocketCommand
 ) & {
     shareCode: string;
 };
@@ -1169,10 +1216,10 @@ function socketJoin(shareCode: string) {
 
 function App() {
     const { displayData, sourceData, editData, cellStyle, sheetState, dispatch } = useSheetData();
-    const [pointerMap, setPointerMap] = useState(new Map<string, PeerData>());
+    const [peerDataMap, setPeerDataMap] = useState(new Map<string, PeerData>());
     const [showJoinPopover, setShowJoinPopover] = useState(false);
     const [showSharePopover, setShowSharePopover] = useState(false);
-    const [showInfoPopover, setShowInfoPopover] = useState(true);
+    const [showInfoPopover, setShowInfoPopover] = useState(sheetState.cellMap.size === 0);
 
     useEffect(() => {
         function onSync(data: any) {
@@ -1212,7 +1259,7 @@ function App() {
                     break;
                 }
                 case SocketCommandType.POINTER_SYNC_SOCKET_COMMAND: {
-                    setPointerMap((old) => {
+                    setPeerDataMap((old) => {
                         const newMap = new Map(old);
                         const oldEntry = newMap.get(command.peerId);
                         if (oldEntry) {
@@ -1226,11 +1273,48 @@ function App() {
                                 lastUpdated: Date.now(),
                                 color: '#' + ((Math.random() * 0xffffff) << 0).toString(16),
                                 active: true,
+                                selection: {
+                                    x1: -1,
+                                    y1: -1,
+                                    x2: -1,
+                                    y2: -1,
+                                },
                             });
                         }
                         return newMap;
                     });
 
+                    break;
+                }
+                case SocketCommandType.SELECTION_SYNC_SOCKET_COMMAND: {
+                    setPeerDataMap((old) => {
+                        const newMap = new Map(old);
+                        const oldEntry = newMap.get(command.peerId);
+                        if (oldEntry) {
+                            oldEntry.selection = {
+                                x1: command.x1,
+                                y1: command.y1,
+                                x2: command.x2,
+                                y2: command.y2,
+                            };
+                            oldEntry.active = true;
+                        } else {
+                            newMap.set(command.peerId, {
+                                x: -100,
+                                y: -100,
+                                lastUpdated: Date.now(),
+                                color: '#' + ((Math.random() * 0xffffff) << 0).toString(16),
+                                active: true,
+                                selection: {
+                                    x1: command.x1,
+                                    y1: command.y1,
+                                    x2: command.x2,
+                                    y2: command.y2,
+                                },
+                            });
+                        }
+                        return newMap;
+                    });
                     break;
                 }
             }
@@ -1259,11 +1343,10 @@ function App() {
         }
     };
 
-    const onStartServerClick = () => {
-        console.log('starting server with code:', sheetState.myShareCode);
+    useEffect(() => {
         dispatch({ type: SheetActionType.SET_MULTIPLAYER_STATUS, status: 'server' });
         socketJoin(sheetState.myShareCode);
-    };
+    }, []);
 
     const [cellWidth, setCellWidth] = useState<number[]>(sheetState.columnWidth);
     const [cellHeight, setCellHeight] = useState<number[]>(sheetState.rowHeight);
@@ -1284,6 +1367,20 @@ function App() {
                 y2,
             },
         });
+
+        if (sheetState.multiplayerStatus !== 'none') {
+            const shareCode =
+                sheetState.multiplayerStatus === 'client' ? sheetState.joinShareCode : sheetState.myShareCode;
+            socketSync({
+                command: SocketCommandType.SELECTION_SYNC_SOCKET_COMMAND,
+                peerId: myName,
+                x1,
+                y1,
+                x2,
+                y2,
+                shareCode,
+            });
+        }
 
         // logic for selecting cell while typing the formula
         setTimeout(() => {
@@ -1379,18 +1476,37 @@ function App() {
     // clear old pointer data
     useEffect(() => {
         const handle = setInterval(() => {
-            const newPointerMap = new Map(pointerMap);
+            const newPointerMap = new Map(peerDataMap);
+            let changed = false;
             for (const [k, v] of newPointerMap) {
                 if (Date.now() - v.lastUpdated > 3000) {
+                    if (v.active) {
+                        changed = true;
+                    }
                     v.active = false;
                 }
             }
-            setPointerMap(newPointerMap);
-        }, 1000);
+            if (changed) {
+                setPeerDataMap(newPointerMap);
+            }
+        }, 3000);
         return () => {
             clearInterval(handle);
         };
-    }, [pointerMap]);
+    }, [peerDataMap]);
+
+    const secondarySelections = useMemo(() => {
+        const selections = [];
+        for (const [, entry] of peerDataMap) {
+            if (entry.active) {
+                selections.push({
+                    color: entry.color,
+                    span: entry.selection,
+                });
+            }
+        }
+        return selections;
+    }, [peerDataMap]);
 
     return (
         <Container
@@ -1400,27 +1516,27 @@ function App() {
         >
             <Header>
                 <HeaderLogo />
-                <HeaderTitle>Untitled Sheet</HeaderTitle>
+                <HeaderTitle
+                    contentEditable
+                    onBlur={(e) =>
+                        dispatch({ type: SheetActionType.SET_SHEET_TITLE, title: e.currentTarget.innerHTML })
+                    }
+                    dangerouslySetInnerHTML={{ __html: sheetState.title }}
+                />
                 <Spacer />
                 <Button
                     type={ButtonType.Secondary}
                     inverted
                     label={'Examples'}
-                    onClick={() => alert('Hit Cmd+D or Ctrl+D to bookmark the page')}
+                    onClick={() => setShowInfoPopover(true)}
                 />
-                {sheetState.multiplayerStatus === 'none' ? (
+                {sheetState.multiplayerStatus !== 'client' ? (
                     <>
                         <Button
                             type={ButtonType.Secondary}
                             inverted
                             label={'Join'}
                             onClick={() => setShowJoinPopover(true)}
-                        />
-                        <Button
-                            type={ButtonType.Secondary}
-                            inverted
-                            label={'Start server'}
-                            onClick={() => onStartServerClick()}
                         />
                         {showJoinPopover && (
                             <JoinPopover
@@ -1437,12 +1553,16 @@ function App() {
                 <Button type={ButtonType.Primary} inverted label={'Share'} onClick={() => setShowSharePopover(true)} />
                 {showSharePopover && (
                     <SharePopover
-                        codeValue=""
-                        onCodeValueChange={(newValue: string) => alert('Hit Cmd+D or Ctrl+D to bookmark the page')}
-                        onCodeValueClick={() => alert('Hit Cmd+D or Ctrl+D to bookmark the page')}
-                        copyValue=""
-                        onCopyValueChange={(newValue: string) => alert('Hit Cmd+D or Ctrl+D to bookmark the page')}
-                        onCopyValueClick={() => alert('Hit Cmd+D or Ctrl+D to bookmark the page')}
+                        codeValue={sheetState.myShareCode}
+                        onCodeValueChange={(newValue: string) => {}}
+                        onCodeValueClick={() => {
+                            navigator.clipboard.writeText(sheetState.myShareCode);
+                        }}
+                        copyValue={window.document.location.href}
+                        onCopyValueChange={(newValue: string) => {}}
+                        onCopyValueClick={() => {
+                            navigator.clipboard.writeText(window.document.location.href);
+                        }}
                         onClose={() => setShowSharePopover(false)}
                     />
                 )}
@@ -1598,6 +1718,7 @@ function App() {
                     cellHeight={cellHeight}
                     onChange={onChange}
                     readOnly={false}
+                    secondarySelections={secondarySelections}
                     onCellWidthChange={onCellWidthChange}
                     onCellHeightChange={onCellHeightChange}
                     dontCommitEditOnSelectionChange={dontCommitEditOnSelectionChange}
@@ -1648,7 +1769,7 @@ function App() {
                 />
             </SheetContainer>
 
-            {Array.from(pointerMap.entries()).map(([peerId, pointerData]) => {
+            {Array.from(peerDataMap.entries()).map(([peerId, pointerData]) => {
                 if (!pointerData.active) {
                     return null;
                 }

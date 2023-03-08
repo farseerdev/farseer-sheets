@@ -1,7 +1,9 @@
+import { StackType } from "./types";
+
 // utility functions
 function reduceStack(
     count: number,
-    stack: (number | string | null | (number | string | null)[][])[],
+    stack: StackType,
     reducer: (value: number | string | null) => void
 ) {
     for (let i = 0; i < count; i++) {
@@ -10,8 +12,8 @@ function reduceStack(
             throw new Error('Runtime error');
         }
         if (Array.isArray(elem)) {
-            for (let y = 0; y < elem.length; y++) {
-                for (let x = 0; x < elem[y].length; x++) {
+            for (let y = elem.length - 1; y >= 0; y--) {
+                for (let x = elem[y].length - 1; x >= 0; x--) {
                     const e = elem[y][x];
                     reducer(e);
                 }
@@ -23,7 +25,7 @@ function reduceStack(
 }
 
 function createSingleValueMathFunc(fn: (n: number) => number) {
-    return function (argCount: number, stack: (number | string | null | (number | string | null)[][])[]) {
+    return function (argCount: number, stack: StackType) {
         if (argCount !== 1) {
             throw new Error('Runtime error');
         }
@@ -39,10 +41,10 @@ function createSingleValueMathFunc(fn: (n: number) => number) {
     };
 }
 
-function ifsHelper(criteriaCount: number, stack: (number | string | null | (number | string | null)[][])[]) {
+function ifsHelper(criteriaCount: number, stack: StackType) {
     const result: boolean[] = [];
-    const criteriaRanges: (number | string | null | (number | string | null)[][])[] = [];
-    const criterias: (number | string | null | (number | string | null)[][])[] = [];
+    const criteriaRanges: StackType = [];
+    const criterias: StackType = [];
 
     let rowCount = -1;
     let criteria = true;
@@ -99,7 +101,7 @@ function ifsHelper(criteriaCount: number, stack: (number | string | null | (numb
 
 // exported
 
-export function sum(argCount: number, stack: (number | string | null | (number | string | null)[][])[]) {
+export function sum(argCount: number, stack: StackType) {
     let total = 0;
     reduceStack(argCount, stack, (value) => {
         if (typeof value === 'number') {
@@ -110,7 +112,7 @@ export function sum(argCount: number, stack: (number | string | null | (number |
     stack.push(total);
 }
 
-export function average(argCount: number, stack: (number | string | null | (number | string | null)[][])[]) {
+export function average(argCount: number, stack: StackType) {
     let total = 0;
     let count = 0;
     reduceStack(argCount, stack, (value) => {
@@ -127,7 +129,7 @@ export function average(argCount: number, stack: (number | string | null | (numb
     }
 }
 
-export function count(argCount: number, stack: (number | string | null | (number | string | null)[][])[]) {
+export function count(argCount: number, stack: StackType) {
     let count = 0;
     reduceStack(argCount, stack, (value) => {
         if (value !== null) {
@@ -137,7 +139,7 @@ export function count(argCount: number, stack: (number | string | null | (number
     stack.push(count);
 }
 
-export function min(argCount: number, stack: (number | string | null | (number | string | null)[][])[]) {
+export function min(argCount: number, stack: StackType) {
     let min = 0;
     let foundOne = false;
     reduceStack(argCount, stack, (value) => {
@@ -159,7 +161,7 @@ export function min(argCount: number, stack: (number | string | null | (number |
     }
 }
 
-export function max(argCount: number, stack: (number | string | null | (number | string | null)[][])[]) {
+export function max(argCount: number, stack: StackType) {
     let max = 0;
     let foundOne = false;
     reduceStack(argCount, stack, (value) => {
@@ -181,7 +183,7 @@ export function max(argCount: number, stack: (number | string | null | (number |
     }
 }
 
-export function iffunc(argCount: number, stack: (number | string | null | (number | string | null)[][])[]) {
+export function iffunc(argCount: number, stack: StackType) {
     if (argCount === 3) {
         const elseResult = stack.pop();
         const thanResult = stack.pop();
@@ -210,7 +212,7 @@ export function iffunc(argCount: number, stack: (number | string | null | (numbe
     }
 }
 
-export function vlookup(argCount: number, stack: (number | string | null | (number | string | null)[][])[]) {
+export function vlookup(argCount: number, stack: StackType) {
     if (argCount !== 3) {
         throw new Error('Runtime error');
     }
@@ -239,7 +241,7 @@ export function vlookup(argCount: number, stack: (number | string | null | (numb
     stack.push('#N/A');
 }
 
-export function power(argCount: number, stack: (number | string | null | (number | string | null)[][])[]) {
+export function power(argCount: number, stack: StackType) {
     if (argCount !== 2) {
         throw new Error('Runtime error');
     }
@@ -259,14 +261,14 @@ export const sin = createSingleValueMathFunc(Math.sin);
 export const cos = createSingleValueMathFunc(Math.cos);
 export const log = createSingleValueMathFunc(Math.log10);
 
-export function rand(argCount: number, stack: (number | string | null | (number | string | null)[][])[]) {
+export function rand(argCount: number, stack: StackType) {
     if (argCount !== 0) {
         throw new Error('Runtime error');
     }
     stack.push(Math.random());
 }
 
-export function randbetween(argCount: number, stack: (number | string | null | (number | string | null)[][])[]) {
+export function randbetween(argCount: number, stack: StackType) {
     if (argCount !== 2) {
         throw new Error('Runtime error');
     }
@@ -280,7 +282,7 @@ export function randbetween(argCount: number, stack: (number | string | null | (
     stack.push(Math.round(Math.random() * (to - from) + from));
 }
 
-export function sumifs(argCount: number, stack: (number | string | null | (number | string | null)[][])[]) {
+export function sumifs(argCount: number, stack: StackType) {
     if (argCount < 3) {
         throw new Error('Runtime error');
     }
@@ -310,7 +312,7 @@ export function sumifs(argCount: number, stack: (number | string | null | (numbe
     stack.push(result);
 }
 
-export function countifs(argCount: number, stack: (number | string | null | (number | string | null)[][])[]) {
+export function countifs(argCount: number, stack: StackType) {
     if (argCount < 2) {
         throw new Error('Runtime error');
     }
@@ -332,7 +334,7 @@ export function countifs(argCount: number, stack: (number | string | null | (num
     stack.push(result);
 }
 
-export function and(argCount: number, stack: (number | string | null | (number | string | null)[][])[]) {
+export function and(argCount: number, stack: StackType) {
     let result = 1;
     for (let i = 0; i < argCount; i++) {
         const elem = stack.pop();
@@ -349,7 +351,7 @@ export function and(argCount: number, stack: (number | string | null | (number |
     stack.push(result);
 }
 
-export function or(argCount: number, stack: (number | string | null | (number | string | null)[][])[]) {
+export function or(argCount: number, stack: StackType) {
     let result = 0;
     for (let i = 0; i < argCount; i++) {
         const elem = stack.pop();
@@ -367,7 +369,7 @@ export function or(argCount: number, stack: (number | string | null | (number | 
     stack.push(result);
 }
 
-export function not(argCount: number, stack: (number | string | null | (number | string | null)[][])[]) {
+export function not(argCount: number, stack: StackType) {
     if (argCount !== 1) {
         throw new Error('Runtime error');
     }
@@ -379,7 +381,7 @@ export function not(argCount: number, stack: (number | string | null | (number |
     stack.push(!!arg ? 0 : 1);
 }
 
-export function len(argCount: number, stack: (number | string | null | (number | string | null)[][])[]) {
+export function len(argCount: number, stack: StackType) {
     if (argCount !== 1) {
         throw new Error('Runtime error');
     }
@@ -395,7 +397,7 @@ export function len(argCount: number, stack: (number | string | null | (number |
     stack.push(0);
 }
 
-export function value(argCount: number, stack: (number | string | null | (number | string | null)[][])[]) {
+export function value(argCount: number, stack: StackType) {
     if (argCount !== 1) {
         throw new Error('Runtime error');
     }
@@ -415,7 +417,7 @@ export function value(argCount: number, stack: (number | string | null | (number
     stack.push('#VALUE!');
 }
 
-export function text(argCount: number, stack: (number | string | null | (number | string | null)[][])[]) {
+export function text(argCount: number, stack: StackType) {
     if (argCount !== 1) {
         throw new Error('Runtime error');
     }
@@ -430,7 +432,7 @@ export function text(argCount: number, stack: (number | string | null | (number 
     stack.push('');
 }
 
-export function round(argCount: number, stack: (number | string | null | (number | string | null)[][])[]) {
+export function round(argCount: number, stack: StackType) {
     if (argCount !== 2) {
         throw new Error('Runtime error');
     }
@@ -439,7 +441,6 @@ export function round(argCount: number, stack: (number | string | null | (number
     const arg1 = stack.pop();
     if (typeof arg1 !== 'number' || typeof arg2 !== 'number') {
         throw new Error('Runtime error');
-        return;
     }
     const sign = arg1 >= 0 ? 1 : -1;
     const powerOfTen = Math.pow(10, arg2);
@@ -447,50 +448,142 @@ export function round(argCount: number, stack: (number | string | null | (number
     stack.push(result);
 }
 
-/*
+export function concat(argCount: number, stack: StackType) { 
+    const array: string[] = [];
+    reduceStack(argCount, stack, (value) => {
+        if (value === null) {
+            return;
+        }
+        array.push(value.toString());
+    });
+    stack.push(array.reverse().join(''));
+}
 
-done:
-sum
-average
-count
-max
-min
-if
-vlookup
-power
-todo:
-abs
-ceiling
-floor
-rand
-randbetween
-sumifs
-and
-or
-not
-len
-value
-text
-countifs
-round
+export function trim(argCount: number, stack: StackType) { 
+    if (argCount !== 1) {
+        throw new Error('Runtime error');
+    }
+    const arg = stack.pop();
+    if (typeof arg === 'number' || typeof arg === 'string') {
+        stack.push(arg.toString().trim());
+    } else {
+        stack.push(null);
+    }
+}
 
-todo:
+export function left(argCount: number, stack: StackType) { 
+    if (argCount < 1 || argCount > 2) {
+        throw new Error('Runtime error');
+    }
+    let chars = 1;
+    if (argCount === 2) {
+        const charArg = stack.pop();
+        if (typeof charArg === 'number') {
+            chars = charArg;
+        }
+    }
+    const textArg = stack.pop();
+    if (typeof textArg === 'number' || typeof textArg === 'string') {
+        const text = textArg.toString();
+        stack.push(text.substring(0, chars));
+    } else {
+        stack.push(null);
+    }
+}
 
-concat
-trim
-left
-right
-mid
-find
-pmt
-ifs
-index
-match
-sumif
-countif
-column
-row
-address
-indirect
+export function right(argCount: number, stack: StackType) { 
+    if (argCount < 1 || argCount > 2) {
+        throw new Error('Runtime error');
+    }
+    let chars = 1;
+    if (argCount === 2) {
+        const charArg = stack.pop();
+        if (typeof charArg === 'number') {
+            chars = charArg;
+        }
+    }
+    const textArg = stack.pop();
+    if (typeof textArg === 'number' || typeof textArg === 'string') {
+        const text = textArg.toString();
+        stack.push(text.substring(text.length-chars));
+    } else {
+        stack.push(null);
+    }
+}
 
-*/
+export function mid(argCount: number, stack: StackType) { 
+    if (argCount !== 3) {
+        throw new Error('Runtime error');
+    }
+    const countArg = stack.pop();
+    const fromArg = stack.pop();
+    const textArg = stack.pop();
+
+    if (typeof fromArg !== 'number') {
+        throw new Error('Runtime error');
+    }
+    if (fromArg === 0) {
+        throw new Error('Runtime error');
+    }
+    let count = 0;
+    if (typeof countArg === 'number') {
+        count = countArg;
+    }
+
+    if (typeof textArg === 'number' || typeof textArg === 'string') {
+        const text = textArg.toString();
+        stack.push(text.substring(fromArg - 1, fromArg - 1 + count));
+    } else {
+        stack.push(null);
+    }
+}
+
+export function find(argCount: number, stack: StackType) { 
+
+}
+
+export function pmt(argCount: number, stack: StackType) { 
+
+}
+
+export function ifs(argCount: number, stack: StackType) { 
+
+}
+
+export function index(argCount: number, stack: StackType) { 
+
+}
+
+export function match(argCount: number, stack: StackType) { 
+
+}
+
+export function sumif(argCount: number, stack: StackType) { 
+
+}
+
+export function countif(argCount: number, stack: StackType) { 
+
+}
+
+export function column(argCount: number, stack: StackType) { 
+
+}
+
+export function row(argCount: number, stack: StackType) { 
+
+}
+
+export function address(argCount: number, stack: StackType) { 
+
+}
+
+export function indirect(argCount: number, stack: StackType) { 
+
+}
+
+export function iferror(argCount: number, stack: StackType) { 
+
+}
+
+

@@ -25,10 +25,13 @@ export interface CodeGenerator {
     addInstruction: (instruction: Instruction) => void;
 }
 
+export type StackType = (number | string | null | (number | string | null)[][])[];
+
 export type BuiltinFunction = (
     argCount: number,
-    stack: (number | string | null | (number | string | null)[][])[]
+    stack: StackType
 ) => void;
+
 
 export const builtinMap = new Map<string, BuiltinFunction>([
     ['sum', builtin.sum],
@@ -56,4 +59,9 @@ export const builtinMap = new Map<string, BuiltinFunction>([
     ['text', builtin.text],
     ['countifs', builtin.countifs],
     ['round', builtin.round],
+    ['concat', builtin.concat],
+    ['trim', builtin.trim],
+    ['left', builtin.left],
+    ['right', builtin.right],
+    ['mid', builtin.mid],
 ]);

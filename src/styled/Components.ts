@@ -1,12 +1,13 @@
 import { styled, keyframes } from 'goober';
 import { forwardRef } from 'react';
 
-export const HeaderTitle = styled('a')(({ theme }) => ({
+export const HeaderTitle = styled('div')(({ theme }) => ({
     color: theme.colors.ui.white,
     fontSize: theme.font.headerSize,
     fontWeight: 700,
     paddingLeft: theme.space.m,
     lineHeight: 1,
+    outline: '0px solid transparent',
 }));
 
 // Button types:
